@@ -1,8 +1,10 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import *
 from django.shortcuts import get_object_or_404
 from django.core.paginator import Paginator
+from django.db.models import Max
+from .models import *
+from django.contrib import auth
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -18,6 +20,20 @@ class AdminSerializer(serializers.HyperlinkedModelSerializer):
         model = Admin
         fields = ['user']
 
+class MessageSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Message
+        fields = ['sender','recipient']
+    def create(self, validated_data):
+
+        user = validated_data.pop('user')
+        sender = validated_data.get('sender')
+        to_user_username = validated_data.get('recipient')
+        body = validated_data.get('body')
+        to_user = get_object_or_404(Membre, user=to_user_username)
+        Message.send_message(sender, to_user, body)
+        messages=Message.objects.create(user=user,**validated_data)
+        return messages
 class MembreSerializer(serializers.HyperlinkedModelSerializer):
     user=UserSerializer()
     class Meta:
@@ -55,8 +71,7 @@ class MembreSerializer(serializers.HyperlinkedModelSerializer):
         user.password = user_data.get('password', user.password)
         user.save()
         
-        return instance
-
+        return instancess
 class CategorieSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Categorie
@@ -108,7 +123,7 @@ class LikesSerializer(serializers.HyperlinkedModelSerializer):
     #post=PostSerializerone()
     class Meta:
         model = Likes
-        fields = '__all__'
+        fields = ['post','user']
     """def update(self,instance, validated_data):
         post_data = validated_data.pop('post')
         post = instance.post         
@@ -131,3 +146,8 @@ class LikesSerializer(serializers.HyperlinkedModelSerializer):
         instance.save()
         return instance
     """
+    def update(self,validated_data):
+        user_data = validated_data.pop('user')
+        post=validated_data.get('id')
+        return post
+

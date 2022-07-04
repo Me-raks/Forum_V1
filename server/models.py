@@ -1,10 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.core.validators import RegexValidator
 from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
+
 class Membre(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE,related_name="membre")
     phone_regex=RegexValidator(regex=r'^(\+221)?[- ]?(77|70|76|78)[- ]?([0-9]{3})[- ]?([0-9]{2}[- ]?){2}$', message="le numero de telephone est invalide!")
@@ -109,6 +108,35 @@ class Notification(models.Model):
     notification_type = models.IntegerField(choices=NOTIFICATION_TYPES)
     date = models.DateTimeField(auto_now_add=True)
     is_seen = models.BooleanField(default=False)
+    
+class Message(models.Model):
+    #user = models.ForeignKey(Membre, on_delete=models.CASCADE, related_name='msg_user')
+    sender = models.ForeignKey(Membre, on_delete=models.CASCADE, related_name='from_user')
+    recipient = models.ForeignKey(Membre, on_delete=models.CASCADE, related_name='to_user')
+    body = models.TextField(max_length=1000, blank=True, null=True)
+    date = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+    def send_message(from_user, to_user, body):
+        sender_message = Message(
+            sender=from_user,
+            recipient=to_user,
+            body=body,
+            is_read=True)
+        sender_message.save()
+
+        
+        return sender_message
+
+    def get_messages(user):
+        messages = Message.objects.filter(sender=user).values('recipient').annotate(last=Max('date')).order_by('-last')
+        users = []
+        for message in messages:
+            users.append({
+                'user': Membre.objects.get(pk=message['recipient']),
+                'last': message['last'],
+                'unread': Message.objects.filter(user=user, recipient__pk=message['recipient'], is_read=False).count()
+            })
+        return users
 
 class Likes(models.Model):
     user = models.ForeignKey(Membre, on_delete=models.CASCADE, related_name='user_likes')

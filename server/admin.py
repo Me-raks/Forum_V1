@@ -19,6 +19,11 @@ admin.site.register(Tag)
 @admin.register(Membre)
 class Membres(admin.ModelAdmin):
     list_display = ("user","nom","prenom","telephone")
+
 @admin.register(Post)
 class Posts(admin.ModelAdmin):
     list_display = ("id","likes_count")
+
+@admin.register(Message)
+class Messages(admin.ModelAdmin):
+    list_display = ("sender","recipient","body")

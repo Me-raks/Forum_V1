@@ -23,12 +23,16 @@ import notifications.urls
 from django.urls import include, path, re_path
 from rest_framework import routers
 from server import views
-
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 router = routers.DefaultRouter()
 router.register(r"users", views.UserViewSet)
 router.register(r"membre", views.MembreViewSet)
 router.register(r"Admin", views.AdminViewSet)
+router.register(r"Message", views.MessageViewSet)
 router.register(r"Categorie", views.CategorieViewSet)
 router.register(r"likes", views.LikesViewSet)
 router.register(r"notifications", views.NotificationsViewSet)
@@ -52,6 +56,8 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     re_path('^inbox/notifications/', include(notifications.urls, namespace='notifications')),
     path("", include(router.urls)),
     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
