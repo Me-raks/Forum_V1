@@ -1,31 +1,144 @@
-from django.contrib.auth.models import User
-from rest_framework import serializers
-from django.shortcuts import get_object_or_404
-from django.core.paginator import Paginator
-from django.db.models import Max
+from rest_framework import serializers 
 from .models import *
-from django.contrib import auth
+from django.contrib.auth.models import User, Permission
+from django.contrib.contenttypes.models import ContentType
+from rest_framework.exceptions import AuthenticationFailed
+import os
 
-class UserSerializer(serializers.HyperlinkedModelSerializer):
+
+
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
-        fields = ['id','username', 'email']
+        model=User
+        fields=['id','username','email','first_name','last_name','password']
+
         extra_kwargs = {
             'username': {'validators': []}
         }
 
-class AdminSerializer(serializers.HyperlinkedModelSerializer):
-    user=UserSerializer(many=False, read_only=True)
+class AdminSerializer(serializers.ModelSerializer):
+    user=UserSerializer()
     class Meta:
         model = Admin
-        fields = ['user']
+        fields=['user','telephone','niveau','nom_organisation']
+
+    def create(self, validated_data):
+
+        user = validated_data.pop('user')
+        telephone=validated_data.get('telephone')
+        username=validated_data.get('username')
+        email=validated_data.get('email')
+        if Admin.objects.filter(telephone=telephone).exists():
+            raise serializers.ValidationError('Ce membre existe déja')
+            return telephone
+        if User.objects.filter(email=email).exists() :
+            raise serializers.ValidationError('Ce membre existe déja')
+            return email
+        if User.objects.filter(username=username).exists():
+            raise serializers.ValidationError('Ce compte existe déja')
+            return username
+        user=User.objects.create_user(**user)
+        admin=Admin.objects.create(user=user,**validated_data)
+        content_type = ContentType.objects.get_for_model(Admin)
+        permission = Permission.objects.filter(codename='is_admin').first()
+        if permission:
+            user.user_permissions.add(permission)
+        else:
+            created = Permission.objects.create(codename='is_admin', name='is admin', content_type=content_type)
+            user.user_permissions.add(created)
+        return admin
+
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user')
+        user = instance.user         
+        instance.telephone = validated_data.get('telephone', instance.telephone)
+        instance.save()
+        user.username = compte_data.get('username', user.username)
+        user.email = compte_data.get('email', user.email)
+        user.first_name = compte_data.get('first_name', user.first_name)
+        user.last_name = compte_data.get('last_name', user.last_name)
+        user.password = compte_data.get('password', user.password)
+        user.save()
+        return instancess
+
+
+class MembreSerializer(serializers.ModelSerializer):
+    user =UserSerializer()
+
+    class Meta:
+        model=Membre
+        fields=['user','telephone','niveau','nom_organisation']
+
+    def create(self, validated_data):
+        user = validated_data.pop('user')
+        telephone=validated_data.get('telephone')
+        username=validated_data.get('username')
+        email=validated_data.get('email')
+        if Membre.objects.filter(telephone=telephone).exists():
+            raise serializers.ValidationError('Ce membre existe déja')
+            return telephone
+        if User.objects.filter(email=email).exists() :
+            raise serializers.ValidationError('Ce membre existe déja')
+            return email
+        if User.objects.filter(username=username).exists():
+            raise serializers.ValidationError('Ce compte existe déja')
+            return username
+
+        user=User.objects.create_user(**user)
+        membre=Membre.objects.create(user=user,**validated_data)
+        return membre
+    
+    def update(self, instance, validated_data,*args, **kwargs):  
+        if 'user' in validated_data.keys():   
+            membre_data = validated_data.pop('user')
+            membre_serializer = UserSerializer(data = membre_data,partial=True) 
+            if membre_serializer.is_valid():
+                membre = membre_serializer.update(instance=instance.membre, validated_data=membre_serializer.validated_data)
+        if 'niveau' in validated_data.keys():   
+            instance.niveau = validated_data.get('niveau', instance.niveau)
+        if 'nom_organisation' in validated_data.keys():   
+            instance.nom_organisation = validated_data.get('nom_organisation', instance.nom_organisation)
+        instance.save()
+        return instance
+
+class ModerateurSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+
+    class Meta:
+        model=Moderateur
+        fields=['user','telephone','niveau','nom_organisation']
+
+    def create(self, validated_data):
+        user = validated_data.pop('user')
+        telephone=validated_data.get('telephone')
+        username=validated_data.get('username')
+        email=validated_data.get('email')
+        if Moderateur.objects.filter(telephone=telephone).exists():
+            raise serializers.ValidationError('Ce membre existe déja')
+            return telephone
+        if User.objects.filter(email=email).exists() :
+            raise serializers.ValidationError('Ce membre existe déja')
+            return email
+        if User.objects.filter(username=username).exists():
+            raise serializers.ValidationError('Ce compte existe déja')
+            return username
+        user=User.objects.create_user(**user)
+        moderateur=Moderateur.objects.create(user=user,**validated_data)
+        content_type = ContentType.objects.get_for_model(Moderateur)
+        permission = Permission.objects.filter(codename='is_moderateur').first()
+        if permission:
+            user.user_permissions.add(permission)
+        else:
+            created = Permission.objects.create(codename='is_moderateur', name='is moderateur', content_type=content_type)
+            user.user_permissions.add(created)
+        return moderateur
 
 class MessageSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Message
         fields = ['sender','recipient']
     def create(self, validated_data):
-
         user = validated_data.pop('user')
         sender = validated_data.get('sender')
         to_user_username = validated_data.get('recipient')
@@ -34,61 +147,17 @@ class MessageSerializer(serializers.HyperlinkedModelSerializer):
         Message.send_message(sender, to_user, body)
         messages=Message.objects.create(user=user,**validated_data)
         return messages
-class MembreSerializer(serializers.HyperlinkedModelSerializer):
-    user=UserSerializer()
+
+class CategorieSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Membre
-        fields = ['user','nom', 'prenom','telephone', 'niveau','nom_organisation']
+        model=Categorie
+        fields='__all__'
 
-        extra_kwargs = {
-            'telephone': {'validators': []}
-        }
-    def create(self, validated_data):
-
-        user = validated_data.pop('user')
-        telephone=validated_data.get('telephone')
-        username=validated_data.get('username')
-        if Membre.objects.filter(telephone=telephone).exists():
-            raise serializers.ValidationError('Ce membre existe déja')
-            return telephone
-        if User.objects.filter(username=username).exists():
-            raise serializers.ValidationError('Ce compte existe déja')
-            return user
-
-        user=User.objects.create(**user)
-        membre=Membre.objects.create(user=user,**validated_data)
-        return membre
-    def update(self, instance, validated_data):
-
-        user_data = validated_data.pop('user')
-        user = instance.user         
-        instance.nom = validated_data.get('nom', instance.nom)
-        instance.prenom = validated_data.get('prenom', instance.prenom)
-        instance.telephone = validated_data.get('telephone', instance.telephone)
-        instance.save()
-        user.identifiant = user_data.get('username', user.username)
-        user.email = user_data.get('email', user.email)
-        user.password = user_data.get('password', user.password)
-        user.save()
-        
-        return instancess
-class CategorieSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Categorie
-        fields ='__all__'
-    def create(self, validated_data):
-        user = validated_data.pop('user')
-        telephone=validated_data.get('titre')
-        admin=Admin.objects.all()
-        if Categorie.objects.filter(titre=titre).exists():
-            raise serializers.ValidationError('Cette Categorie existe déja')
-            return titre
-        categorie=Categorie.objects.create(titre=titre,admin=admin)
-        return categorie
 class TagSerializer(serializers.HyperlinkedModelSerializer):
+    categorie=CategorieSerializer()
     class Meta:
         model = Tag
-        fields = "__all__"
+        fields = ['url','nom','categorie']
 
 class DiscussionSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -123,31 +192,4 @@ class LikesSerializer(serializers.HyperlinkedModelSerializer):
     #post=PostSerializerone()
     class Meta:
         model = Likes
-        fields = ['post','user']
-    """def update(self,instance, validated_data):
-        post_data = validated_data.pop('post')
-        post = instance.post         
-        instance.likes = validated_data.get('likes_count', instance.likes_count)
-        #post_data = validated_data.pop('post')
-        #post = instance.user
-        #post_id = validated_data.get('id')
-        post = get_object_or_404(Post, id=id)
-        paginator = Paginator(profile_list, 25)
-        print(1,post)
-        current_likes = post.likes_count
-        liked = Likes.objects.filter(user=user, post=post).count()
-        if not liked:
-            like = Likes.objects.create(user=user, post=post)
-            current_likes +=  1
-        else:
-            Likes.objects.filter(user=user, post=post).delete()
-            current_likes = current_likes - 1
-        instance.likes_count = current_likes
-        instance.save()
-        return instance
-    """
-    def update(self,validated_data):
-        user_data = validated_data.pop('user')
-        post=validated_data.get('id')
-        return post
-
+        fields = ['posts','user']

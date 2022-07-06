@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from django.dispatch import receiver
@@ -5,20 +6,30 @@ from django.core.validators import RegexValidator
 from django.db.models.signals import post_save, post_delete
 
 class Membre(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE,related_name="membre")
     phone_regex=RegexValidator(regex=r'^(\+221)?[- ]?(77|70|76|78)[- ]?([0-9]{3})[- ]?([0-9]{2}[- ]?){2}$', message="le numero de telephone est invalide!")
-    nom= models.CharField(max_length= 255)
-    prenom= models.CharField(max_length= 255)
-    online =models.BooleanField()
+    is_online =models.BooleanField()
     telephone = models.CharField(validators=[phone_regex],max_length=20)
     niveau = models.CharField(max_length=100)
     nom_organisation = models.CharField(max_length=100)
+    @receiver(post_save, sender=User)
+    def create_user_profile(sender, instance, created, **kwargs):
+        if created:
+            Membre.objects.create(user=instance)
+
+    @receiver(post_save, sender=User)
+    def save_user_profile(sender, instance, **kwargs):
+        instance.membre.save()
 
     def __str__(self):
-        return str(self.prenom + ' '+ self.nom )
+        return str(self.user.username )
     
     __repr__=__str__
-    
+
+class Moderateur(Membre):
+    pass
+
 class Admin(Membre):
     pass
 
@@ -31,25 +42,28 @@ class Anonyme(models.Model):
         return self.username
 
 class Profile(models.Model):
-    user=models.ForeignKey(Membre, on_delete=models.CASCADE,related_name="Profile")
+    membre=models.ForeignKey(Membre, on_delete=models.CASCADE,related_name="Profile")
     nombre_point = models.IntegerField()
     nombre_post = models.IntegerField()
     bio = models.CharField(max_length=500, null= True)
     photo = models.ImageField(null= True)
 
 class Categorie(models.Model):
-    titre =  models.CharField(max_length=50)
-    admin=models.ManyToManyField(Admin)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    titre = models.CharField(max_length=100)
+    created_By = models.ManyToManyField(Admin)
     def __str__(self): 
-        return self.titre
-
+        return str(self.titre)
 class Tag(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     nom= models.CharField(max_length= 255)
+    categorie=models.ForeignKey(Categorie, on_delete=models.CASCADE,related_name="Categorie")
     def __str__(self): 
         return self.nom
 
 class Discussion(models.Model):
-    user=models.ForeignKey(Membre, on_delete=models.CASCADE,related_name="Discussion")
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    membre=models.ForeignKey(Membre, on_delete=models.CASCADE,related_name="Discussion")
     description=models.TextField()
     titre =  models.CharField(max_length=50)
     date = models.DateTimeField(auto_now_add=True)
@@ -57,9 +71,10 @@ class Discussion(models.Model):
     tag= models.ForeignKey(Tag, on_delete= models.SET_NULL, null= True)
     nombre_post = models.IntegerField()
     def __str__(self): 
-        return self.titre
+        return str(self.titre)
 
 class Post(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user=models.ForeignKey(Membre, on_delete=models.CASCADE,related_name="Post")
     body= models.TextField()
     heure_creation = models.DateTimeField(auto_now_add=True)
@@ -100,7 +115,7 @@ class Signale(models.Model):
     post=models.ForeignKey(Post, on_delete=models.CASCADE)
     
 class Notification(models.Model):
-    NOTIFICATION_TYPES = ((1, 'Like'),(2, 'Dislike'),(3,"Response"))
+    NOTIFICATION_TYPES = ((1, 'Like'),(2, 'Dislike'),(3,"Response"),(4,"Signale"))
 
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='noti_post', blank=True, null=True)
     sender = models.ForeignKey(Membre, on_delete=models.CASCADE, related_name='noti_from_user')
@@ -140,20 +155,10 @@ class Message(models.Model):
 
 class Likes(models.Model):
     user = models.ForeignKey(Membre, on_delete=models.CASCADE, related_name='user_likes')
-    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='post_likes')
+    posts = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='post_likes')
      
-    def user_liked_post(sender, instance, *args, **kwargs):
-        like = instance
-        post = like.post
-        sender = like.user
-        #we got the sender and like from the like user that liking
-        notify = Notification(post=post, sender=sender, recevier=post.user, notification_type=1)
-        notify.save()
-    def user_unlike_post(sender, instance, *args, **kwargs):
-        like = instance
-        post = like.post
-        sender = like.user
-        notify = Notification.objects.filter(post=post, sender=sender, notification_type=1)
-        notify.delete()
-post_save.connect(Likes.user_liked_post, sender=Likes)
-post_save.connect(Likes.user_unlike_post, sender=Likes)
+
+class Dislikes(models.Model):
+    user = models.ForeignKey(Membre, on_delete=models.CASCADE, related_name='user_dislikes')
+    posts = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='post_dislikes')
+     

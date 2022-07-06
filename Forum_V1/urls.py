@@ -19,7 +19,7 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 import notifications.urls
-
+from server.views import *
 from django.urls import include, path, re_path
 from rest_framework import routers
 from server import views
@@ -29,18 +29,19 @@ from rest_framework_simplejwt.views import (
 )
 
 router = routers.DefaultRouter()
-router.register(r"users", views.UserViewSet)
-router.register(r"membre", views.MembreViewSet)
-router.register(r"Admin", views.AdminViewSet)
-router.register(r"Message", views.MessageViewSet)
-router.register(r"Categorie", views.CategorieViewSet)
-router.register(r"likes", views.LikesViewSet)
-router.register(r"notifications", views.NotificationsViewSet)
-router.register(r"Tag", views.TagViewSet)
-router.register(r"Discussion", views.DiscussionViewSet)
-router.register(r"Post", views.PostViewSet)
-router.register(r"Question", views.QuestionViewSet)
-router.register(r"Reponse", views.ReponseViewSet)
+router.register(r'User', UserViewSet, basename='User')
+router.register(r'Membre', MembreViewSet, basename='Membre')
+router.register(r'Moderateur', ModerateurViewSet, basename='Moderateur')
+router.register(r'Admins', AdminViewSet, basename='Admin')
+router.register(r"Message", MessageViewSet, basename='Message')
+router.register(r"Categorie", CategorieViewSet, basename='Categorie')
+router.register(r"likes", LikesViewSet, basename='Likes')
+router.register(r"notifications", NotificationsViewSet, basename='notifications')
+router.register(r"Tag", TagViewSet, basename='tag')
+router.register(r"Discussion", DiscussionViewSet,)
+router.register(r"Post", PostViewSet, basename='post')
+router.register(r"Question", QuestionViewSet, basename='quetion')
+router.register(r"Reponse", ReponseViewSet, basename='reponse')
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -52,8 +53,9 @@ schema_view = get_schema_view(
       license=openapi.License(name="BSD License"),
    ),
    public=True,
-   permission_classes=[permissions.AllowAny],
+   permission_classes=(),
 )
+
 
 urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
