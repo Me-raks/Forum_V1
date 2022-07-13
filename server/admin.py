@@ -7,13 +7,9 @@ admin.site.register(Admin)
 admin.site.register(SuperAdmin)
 admin.site.register(Categorie)
 admin.site.register(Discussion)
-
 admin.site.register(Signale)
-admin.site.register(Reponse)
 admin.site.register(Question)
-admin.site.register(Rate)
 admin.site.register(Profile)
-admin.site.register(Notification)
 admin.site.register(Likes)
 admin.site.register(Tag)
 admin.site.register(Dislikes)
@@ -24,8 +20,16 @@ class Membres(admin.ModelAdmin):
 
 @admin.register(Post)
 class Posts(admin.ModelAdmin):
-    list_display = ("id","likes_count")
+    list_display = ("body","user","likes_count","dislikes_count","signale_count")
+
+@admin.register(Reponse)
+class Reponses(admin.ModelAdmin):
+    list_display = ("body","user","post","likes_count")
 
 @admin.register(Message)
 class Messages(admin.ModelAdmin):
     list_display = ("sender","recipient","body")
+
+@admin.register(Notification)
+class Notifications(admin.ModelAdmin):
+    list_display = ("sender","recevier","post","notification_type")

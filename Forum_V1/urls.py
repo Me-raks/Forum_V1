@@ -14,6 +14,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.conf.urls.static import static
+from django.conf import settings
 from django.urls import path
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
@@ -30,15 +32,19 @@ from rest_framework_simplejwt.views import (
 
 router = routers.DefaultRouter()
 router.register(r'User', UserViewSet, basename='User')
+router.register(r'Profile', ProfileViewSet, basename='Profile')
 router.register(r'Membre', MembreViewSet, basename='Membre')
 router.register(r'Moderateur', ModerateurViewSet, basename='Moderateur')
 router.register(r'Admins', AdminViewSet, basename='Admin')
+router.register(r'SuperAdmin', SuperAdminViewSet, basename='SuperAdmin')
 router.register(r"Message", MessageViewSet, basename='Message')
 router.register(r"Categorie", CategorieViewSet, basename='Categorie')
 router.register(r"likes", LikesViewSet, basename='Likes')
+router.register(r"Dislikes", DislikesViewSet, basename='Dislikes')
+router.register(r"Signale", SignaleViewSet, basename='Signale')
 router.register(r"notifications", NotificationsViewSet, basename='notifications')
 router.register(r"Tag", TagViewSet, basename='tag')
-router.register(r"Discussion", DiscussionViewSet,)
+router.register(r"Discussion", DiscussionViewSet,basename='Discussion')
 router.register(r"Post", PostViewSet, basename='post')
 router.register(r"Question", QuestionViewSet, basename='quetion')
 router.register(r"Reponse", ReponseViewSet, basename='reponse')
@@ -67,4 +73,8 @@ urlpatterns = [
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-]
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+admin.site.site_header="Forum pour Simulamath"
+admin.site.site_title="Forum"
+admin.site.index_title="Interface d'administration Forum"

@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'server.apps.ServerConfig',
+    'authentication.apps.AuthenticationConfig',
     'rest_framework',
     'corsheaders',
     'drf_yasg',
@@ -69,11 +70,15 @@ MIDDLEWARE = [
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES':('rest_framework.permissions.IsAuthenticated',),
-    'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework_simplejwt.authentication.JWTAuthentication',),
+    #'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework_simplejwt.authentication.JWTAuthentication',),
     "DATE_INPUT_FORMATS": [("%Y-%m-%d")],
 
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'
     ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ],
+    'DEFAULT_VERSIONING_CLASS':'rest_framework.versioning.NamespaceVersioning',
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema' 
 }
 
@@ -123,8 +128,9 @@ DATABASES = {
             'NAME': 'Forum_dbs',
             'ENFORCE_SCHEMA': False,
             'CLIENT': {
-                'host': 'mongodb+srv://Merak:123@cluster0.ixu5h.mongodb.net/?retryWrites=true&w=majority',
-                "authMechanism":"SCRAM-SHA-1"
+                'host': 'mongodb://localhost:27017',
+                #'host': 'mongodb+srv://Merak:123@cluster0.ixu5h.mongodb.net/?retryWrites=true&w=majority',
+                #"authMechanism":"SCRAM-SHA-1"
             }  
         }
 }
